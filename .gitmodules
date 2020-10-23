@@ -1,0 +1,9 @@
+[submodule "deps/anjay"]
+	path = deps/anjay
+	url = https://github.com/AVSystem/Anjay.git
+[submodule "deps/jni.hpp"]
+	path = deps/jni.hpp
+	url = https://github.com/mapbox/jni.hpp.git
+[submodule "deps/mbedtls"]
+	path = deps/mbedtls
+	url = https://github.com/ARMmbed/mbedtls
