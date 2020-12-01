@@ -1,0 +1,110 @@
+/*
+ * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+apply plugin: 'com.android.library'
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
+
+ext.getVersionCode = { version ->
+    def code = 0
+    if (versionDetails().isCleanTag) {
+        String[] split = version.split('[.]')
+        assert split.length == 3 || split.length == 4
+
+        def multiplier = 1000000
+        for (String value : split) {
+            code += multiplier * (value as int)
+            multiplier = multiplier.intdiv(100)
+        }
+    }
+    return code
+}
+
+android {
+    compileSdkVersion 26
+
+    defaultConfig {
+        externalNativeBuild {
+            cmake {
+                // Workaround for bad casts within Mbed TLS
+                cFlags '-Wno-pointer-sign'
+            }
+        }
+        minSdkVersion 26
+        versionName gitVersion()
+        versionCode getVersionCode(versionName)
+    }
+
+    externalNativeBuild {
+        cmake {
+            path '$projectDir/../../native-library/CMakeLists.txt'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    lintOptions {
+        tasks.lint.enabled = false
+    }
+}
+
+signing {
+    sign publishing.publications
+}
+
+project.afterEvaluate {
+    publishing {
+        repositories {
+            maven {
+                url 'https://oss.sonatype.org/service/local/staging/deploy/maven2'
+                credentials(PasswordCredentials)
+            }
+        }
+
+        publications {
+            maven(MavenPublication) {
+                groupId 'com.avsystem.anjay'
+                artifactId 'anjay-android'
+                from components.release
+
+                pom {
+                    name = 'Anjay'
+                    description = 'Anjay LwM2M library'
+                    url = 'https://www.avsystem.com/products/anjay/'
+                    licenses {
+                        license {
+                            name = 'The Apache License, Version 2.0'
+                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        }
+                    }
+                    developers {
+                        developer {
+                            name = 'AVSystem'
+                            email = 'avsystem@avsystem.com'
+                        }
+                    }
+                    scm {
+                        connection = 'scm:git:git://github.com/AVSystem/Anjay-java.git'
+                        url = 'https://github.com/AVSystem/Anjay-java'
+                    }
+                }
+            }
+        }
+    }
+}

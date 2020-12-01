@@ -1,0 +1,81 @@
+/*
+ * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+apply plugin: 'java-library'
+apply plugin: 'net.freudasoft.gradle-cmake-plugin'
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
+
+javadoc {
+    exclude '**/impl/**'
+}
+
+cmake {
+    sourceFolder = file('$projectDir/../../native-library/')
+    buildConfig = 'Release'
+    buildClean = false
+}
+
+tasks.build.dependsOn(cmakeBuild)
+tasks.compileJava.dependsOn(cmakeBuild)
+
+signing {
+    sign publishing.publications
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
+publishing {
+    repositories {
+        maven {
+            url 'https://oss.sonatype.org/service/local/staging/deploy/maven2'
+            credentials(PasswordCredentials)
+        }
+    }
+
+    publications {
+        maven(MavenPublication) {
+            groupId 'com.avsystem.anjay'
+            artifactId 'anjay-java'
+            from components.java
+
+            pom {
+                name = 'Anjay'
+                description = 'Anjay LwM2M library'
+                url = 'https://www.avsystem.com/products/anjay/'
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        name = 'AVSystem'
+                        email = 'avsystem@avsystem.com'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com/AVSystem/Anjay-java.git'
+                    url = 'https://github.com/AVSystem/Anjay-java'
+                }
+            }
+        }
+    }
+}

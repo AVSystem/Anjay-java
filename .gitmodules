@@ -1,9 +1,9 @@
-[submodule "deps/anjay"]
-	path = deps/anjay
+[submodule "native-library/deps/anjay"]
+	path = native-library/deps/anjay
 	url = https://github.com/AVSystem/Anjay.git
-[submodule "deps/jni.hpp"]
-	path = deps/jni.hpp
+[submodule "native-library/deps/jni.hpp"]
+	path = native-library/deps/jni.hpp
 	url = https://github.com/mapbox/jni.hpp.git
-[submodule "deps/mbedtls"]
-	path = deps/mbedtls
+[submodule "native-library/deps/mbedtls"]
+	path = native-library/deps/mbedtls
 	url = https://github.com/ARMmbed/mbedtls

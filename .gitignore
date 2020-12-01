@@ -276,8 +276,4 @@ CMakeDoxyfile.in
 CMakeDoxygenDefaults.cmake
 CPackConfig.cmake
 CPackSourceConfig.cmake
-bindings/distributions/*
-bindings/docs/*
-bindings/generated/*
-bindings/scripts/*
-bindings/tmp/*
+library/.cxx/

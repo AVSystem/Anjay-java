@@ -1,3 +1,6 @@
+[![Maven Central](https://img.shields.io/maven-central/v/com.avsystem.anjay/anjay-android?label=maven%20central%3A%20anjay-android)](https://search.maven.org/artifact/com.avsystem.anjay/anjay-android)
+[![Maven Central](https://img.shields.io/maven-central/v/com.avsystem.anjay/anjay-java?label=maven%20central%3A%20anjay-java)](https://search.maven.org/artifact/com.avsystem.anjay/anjay-java)
+
 # Anjay-java [<img align="right" height="50px" src="https://avsystem.github.io/Anjay-doc/_images/avsystem_logo.png">](http://www.avsystem.com/)
 
 ## About
@@ -9,55 +12,54 @@ This project provides almost 1:1 API bindings between [Anjay](https://github.com
 This is a preview release and we don't provide any guarantees about API stability
 or library reliability.
 
-## Usage
+## Using in Android Studio
 
-First of all, remember to update all submodules using `git submodule update --init --recursive`.
+This project is released to Maven Central repository as
+`com.avsystem.anjay.anjay-android`. Add `mavenCentral()` in `repositories`
+section of your build script and `implementation 'com.avsystem.anjay:anjay-android:2.+'` in `dependencies` to use it.
 
-### CMake
+## Using anjay-java package
 
-The library, example client and documentation can be built from command line as follows:
+Although the `anjay-java` package is released on Maven Central repository, it
+requires native shared library to be available. See the Compilation guide for
+details how to build the native library.
+
+## Compilation guide
+
+First of all, remember to update all submodules using
+`git submodule update --init --recursive`.
+
+### Build library
+
 ```sh
-$ cmake .
-$ make -j
+./gradlew :library:build
 ```
 
-To run the example client execute:
+The `jar` file is placed in `library/build/libs` directory. Note that it doesn't
+include the native library, which can be found in `library/build/cmake`
+directory.
+
+### Build and run demo
+
 ```sh
-$ java -Djava.library.path=$PWD/ -jar demo.jar
+./gradlew :demo:build
+java -Djava.library.path=library/build/cmake/ -jar demo/build/libs/demo.jar
 ```
 
 By default, the client attempts to connect to `coap://127.0.0.1:5683`, but it
-can be customized using command line arguments. Use `--help` to see all available
-options.
+can be customized using command line arguments. Use `--help` to see all
+available options.
 
-### Android Studio
+### Building for Android
 
-1. Start with creating a simple base project (_Empty activity_ for example),
-   using Java and API 26 or newer.
-2. In the left navigator right click on the _app_ and select
-   _Link C++ Project with Gradle_, set _Build System_ to _CMake_ and choose
-   _CMakeLists.txt_ file from the root project directory.
-3. As of today's version of mbed TLS (2.23.0) there's a problem preventing it
-   from compiling. A crude and simple workaround for this is to edit
-   application's `build.gradle` as below:
-   ```
-   android {
-       // ...
-       defaultConfig {
-           // ...
-           externalNativeBuild {
-               cmake {
-                   // Workaround for bad casts within mbed TLS
-                   cFlags "-Wno-pointer-sign"
-               }
-           }
-       }
-       // ...
-   }
-   ```
-4. The next step is to add Anjay's Java sources to your project so that you can
-   actually use the bindings. The simplest way to do it is to create a symlink
-   from `bindings/main/java/com/avsystem` to `app/src/main/java/com/avsystem`.
-5. Now you can check
-   `bindings/src/main/java/com/avsystem/anjay/demo/DemoClient.java` to see
-   how to use Anjay's Java bindings.
+```sh
+ANDROID_SDK_ROOT=<path to Android SDK> ./gradlew -Pandroid :library:build
+```
+
+The `aar` files are in `library/build/outputs/aar` directory.
+
+### Running tests
+
+```sh
+./gradlew :testing:check
+```
