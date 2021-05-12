@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,7 +86,8 @@ class SecurityConfig {
         } else if (auto cert = get_cert_security(config)) {
             return { std::move(*cert) };
         } else {
-            avs_throw(std::runtime_error("unsupported security info type"));
+            avs_throw(IllegalArgumentException(
+                    env_, "unsupported security info type"));
         }
     }
 
@@ -155,7 +156,7 @@ public:
                 }
                 return from_dm;
             } else {
-                avs_throw(std::runtime_error("anjay object expired"));
+                avs_throw(IllegalStateException(env_, "anjay object expired"));
             }
         } else {
             return config_;

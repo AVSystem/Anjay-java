@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,14 +26,14 @@ using namespace std;
 
 NativeAnjay::NativeAnjay(jni::JNIEnv &env,
                          jni::Object<utils::Configuration> &config)
-        : objects_(),
-          anjay_(),
-          endpoint_name_(),
-          udp_tx_params_(ANJAY_COAP_DEFAULT_UDP_TX_PARAMS) {
+        : endpoint_name_(),
+          udp_tx_params_(ANJAY_COAP_DEFAULT_UDP_TX_PARAMS),
+          objects_(),
+          anjay_() {
     auto config_accessor = utils::Configuration::Accessor{ env, config };
     auto endpoint_name = config_accessor.get_endpoint_name();
     if (!endpoint_name) {
-        avs_throw(runtime_error("endpoint name MUST be set"));
+        avs_throw(IllegalArgumentException(env, "endpoint name MUST be set"));
     }
     endpoint_name_ = *endpoint_name;
     anjay_configuration_t configuration{};
@@ -74,7 +74,7 @@ NativeAnjay::NativeAnjay(jni::JNIEnv &env,
     }
 
     if (!(anjay_ = decltype(anjay_)(anjay_new(&configuration), anjay_delete))) {
-        avs_throw(runtime_error("could not instantiate anjay"));
+        avs_throw(AnjayException(env, -1, "could not instantiate anjay"));
     }
 }
 
@@ -203,8 +203,7 @@ jni::jboolean NativeAnjay::has_security_config_for_uri(jni::JNIEnv &env,
 jni::jint
 NativeAnjay::register_object(jni::JNIEnv &env,
                              jni::Object<utils::NativeAnjayObject> &object) {
-    auto adapter =
-            make_unique<NativeAnjayObjectAdapter>(anjay_.get(), env, object);
+    auto adapter = make_unique<NativeAnjayObjectAdapter>(anjay_, env, object);
     int result = adapter->install();
     if (!result) {
         objects_.push_back(move(adapter));

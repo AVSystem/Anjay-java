@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package com.avsystem.anjay.demo;
 
 import com.avsystem.anjay.Anjay;
+import com.avsystem.anjay.AnjayException;
 import com.avsystem.anjay.AnjayInputContext;
 import com.avsystem.anjay.AnjayObject;
 import com.avsystem.anjay.AnjayOutputContext;
@@ -39,6 +40,20 @@ public final class DemoObject implements AnjayObject {
     private Optional<Map<Integer, Integer>> multipleInstanceResource = Optional.empty();
 
     private final SortedSet<Integer> INSTANCES = new TreeSet<>(Arrays.asList(1));
+
+    private final class Resource {
+        public static final int INTEGER = 0;
+        public static final int LONG = 1;
+        public static final int FLOAT = 2;
+        public static final int DOUBLE = 3;
+        public static final int STRING = 4;
+        public static final int OBJLNK = 5;
+        public static final int BYTES = 6;
+        public static final int EXECUTABLE = 7;
+        public static final int LAST_EXECUTE_ARGS = 8;
+        public static final int MULTIPLE = 9;
+        public static final int INCREMENT_INTEGER = 10;
+    }
 
     @Override
     public int oid() {
@@ -75,37 +90,60 @@ public final class DemoObject implements AnjayObject {
     @Override
     public SortedSet<ResourceDef> resources(int iid) {
         TreeSet<ResourceDef> resourceDefs = new TreeSet<>();
-        resourceDefs.add(new ResourceDef(0, ResourceKind.RW, this.intValue.isPresent()));
-        resourceDefs.add(new ResourceDef(1, ResourceKind.RW, this.longValue.isPresent()));
-        resourceDefs.add(new ResourceDef(2, ResourceKind.RW, this.floatValue.isPresent()));
-        resourceDefs.add(new ResourceDef(3, ResourceKind.RW, this.doubleValue.isPresent()));
-        resourceDefs.add(new ResourceDef(4, ResourceKind.RW, this.stringValue.isPresent()));
-        resourceDefs.add(new ResourceDef(5, ResourceKind.RW, this.objlnkValue.isPresent()));
-        resourceDefs.add(new ResourceDef(6, ResourceKind.RW, this.bytesValue.isPresent()));
-        resourceDefs.add(new ResourceDef(7, ResourceKind.E, true));
-        resourceDefs.add(new ResourceDef(8, ResourceKind.RM, true));
         resourceDefs.add(
-                new ResourceDef(9, ResourceKind.RWM, this.multipleInstanceResource.isPresent()));
+                new ResourceDef(Resource.INTEGER, ResourceKind.RW, this.intValue.isPresent()));
+        resourceDefs.add(
+                new ResourceDef(Resource.LONG, ResourceKind.RW, this.longValue.isPresent()));
+        resourceDefs.add(
+                new ResourceDef(Resource.FLOAT, ResourceKind.RW, this.floatValue.isPresent()));
+        resourceDefs.add(
+                new ResourceDef(Resource.DOUBLE, ResourceKind.RW, this.doubleValue.isPresent()));
+        resourceDefs.add(
+                new ResourceDef(Resource.STRING, ResourceKind.RW, this.stringValue.isPresent()));
+        resourceDefs.add(
+                new ResourceDef(Resource.OBJLNK, ResourceKind.RW, this.objlnkValue.isPresent()));
+        resourceDefs.add(
+                new ResourceDef(Resource.BYTES, ResourceKind.RW, this.bytesValue.isPresent()));
+        resourceDefs.add(new ResourceDef(Resource.EXECUTABLE, ResourceKind.E, true));
+        resourceDefs.add(new ResourceDef(Resource.LAST_EXECUTE_ARGS, ResourceKind.RM, true));
+        resourceDefs.add(
+                new ResourceDef(
+                        Resource.MULTIPLE,
+                        ResourceKind.RWM,
+                        this.multipleInstanceResource.isPresent()));
+        resourceDefs.add(new ResourceDef(Resource.INCREMENT_INTEGER, ResourceKind.E, true));
         return resourceDefs;
     }
 
     @Override
     public void resourceExecute(int iid, int rid, Map<Integer, Optional<String>> args) {
-        this.lastExecuteArgs = args;
+        switch (rid) {
+            case Resource.EXECUTABLE:
+                this.lastExecuteArgs = args;
+                break;
+
+            case Resource.INCREMENT_INTEGER:
+                if (this.intValue.isEmpty()) {
+                    throw new AnjayException(
+                            AnjayException.INTERNAL, "Integer resource not initialized");
+                }
+                this.intValue = Optional.of(this.intValue.get() + 1);
+                break;
+        }
     }
 
     @Override
     public void resourceReset(int iid, int rid) {
-        assert rid == 9;
+        assert rid == Resource.MULTIPLE;
         this.multipleInstanceResource = Optional.empty();
     }
 
     @Override
     public SortedSet<Integer> resourceInstances(int iid, int rid) {
         switch (rid) {
-            case 8:
+            case Resource.LAST_EXECUTE_ARGS:
                 return new TreeSet<Integer>(this.lastExecuteArgs.keySet());
-            case 9:
+            case Resource.MULTIPLE:
                 return new TreeSet<Integer>(this.multipleInstanceResource.get().keySet());
             default:
                 throw new IllegalArgumentException("Unsupported resource " + rid);
@@ -139,25 +177,25 @@ public final class DemoObject implements AnjayObject {
     @Override
     public void resourceWrite(int iid, int rid, AnjayInputContext context) {
         switch (rid) {
-            case 0:
+            case Resource.INTEGER:
                 this.intValue = Optional.of(context.getInt());
                 break;
-            case 1:
+            case Resource.LONG:
                 this.longValue = Optional.of(context.getLong());
                 break;
-            case 2:
+            case Resource.FLOAT:
                 this.floatValue = Optional.of(context.getFloat());
                 break;
-            case 3:
+            case Resource.DOUBLE:
                 this.doubleValue = Optional.of(context.getDouble());
                 break;
-            case 4:
+            case Resource.STRING:
                 this.stringValue = Optional.of(context.getString());
                 break;
-            case 5:
+            case Resource.OBJLNK:
                 this.objlnkValue = Optional.of(context.getObjlnk());
                 break;
-            case 6:
+            case Resource.BYTES:
                 this.bytesValue = Optional.of(context.getAllBytes());
                 break;
             default:
@@ -168,7 +206,7 @@ public final class DemoObject implements AnjayObject {
     @Override
     public void resourceWrite(int iid, int rid, int riid, AnjayInputContext context) {
         switch (rid) {
-            case 9:
+            case Resource.MULTIPLE:
                 if (!this.multipleInstanceResource.isPresent()) {
                     this.multipleInstanceResource = Optional.of(new HashMap<>());
                 }
@@ -182,25 +220,25 @@ public final class DemoObject implements AnjayObject {
     @Override
     public void resourceRead(int iid, int rid, AnjayOutputContext context) {
         switch (rid) {
-            case 0:
+            case Resource.INTEGER:
                 context.retInt(this.intValue.get());
                 break;
-            case 1:
+            case Resource.LONG:
                 context.retLong(this.longValue.get());
                 break;
-            case 2:
+            case Resource.FLOAT:
                 context.retFloat(this.floatValue.get());
                 break;
-            case 3:
+            case Resource.DOUBLE:
                 context.retDouble(this.doubleValue.get());
                 break;
-            case 4:
+            case Resource.STRING:
                 context.retString(this.stringValue.get());
                 break;
-            case 5:
+            case Resource.OBJLNK:
                 context.retObjlnk(this.objlnkValue.get());
                 break;
-            case 6:
+            case Resource.BYTES:
                 context.retBytes(this.bytesValue.get());
                 break;
             default:
@@ -211,10 +249,10 @@ public final class DemoObject implements AnjayObject {
     @Override
     public void resourceRead(int iid, int rid, int riid, AnjayOutputContext context) {
         switch (rid) {
-            case 8:
+            case Resource.LAST_EXECUTE_ARGS:
                 context.retString(this.lastExecuteArgs.get(riid).orElse("<none>"));
                 break;
-            case 9:
+            case Resource.MULTIPLE:
                 context.retInt(this.multipleInstanceResource.get().get(riid));
                 break;
             default:

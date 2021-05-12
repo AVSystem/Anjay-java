@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,6 +40,12 @@ class NativeAnjayDownload {
     static void download_finished_handler(anjay_t *anjay,
                                           anjay_download_status_t status,
                                           void *user_data);
+
+    NativeAnjayDownload(const NativeAnjayDownload &) = delete;
+    NativeAnjayDownload &operator=(const NativeAnjayDownload &) = delete;
+
+    NativeAnjayDownload(NativeAnjayDownload &&) = delete;
+    NativeAnjayDownload &operator=(NativeAnjayDownload &&) = delete;
 
 public:
     static constexpr auto Name() {

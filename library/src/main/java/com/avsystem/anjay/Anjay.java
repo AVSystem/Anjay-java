@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -386,14 +386,21 @@ public final class Anjay implements AutoCloseable {
         public final int ssid;
         /** Indicates if Queue Mode is enabled. */
         public final boolean queueMode;
+        /** Used port. */
+        public final int port;
 
         /** Constructor for SocketEntry - it is not intended to be called by user. */
         public SocketEntry(
-                SelectableChannel channel, Transport transport, int ssid, boolean queueMode) {
+                SelectableChannel channel,
+                Transport transport,
+                int ssid,
+                boolean queueMode,
+                int port) {
             this.channel = channel;
             this.transport = transport;
             this.ssid = ssid;
             this.queueMode = queueMode;
+            this.port = port;
         }
     }
 

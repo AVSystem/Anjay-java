@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@
 package com.avsystem.anjay.demo;
 
 import com.avsystem.anjay.Anjay;
+import com.avsystem.anjay.AnjayAccessControl;
+import com.avsystem.anjay.AnjayAccessControl.AccessMask;
 import com.avsystem.anjay.AnjayAttrStorage;
 import com.avsystem.anjay.AnjayAttributes;
 import com.avsystem.anjay.AnjayFirmwareUpdate;
@@ -38,6 +40,8 @@ import java.io.InputStreamReader;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -52,11 +56,12 @@ import java.util.logging.Logger;
 
 public final class DemoClient implements Runnable {
     private Anjay.Configuration config;
-    private DemoArgs args;
     private AnjaySecurityObject securityObject;
     private AnjayServerObject serverObject;
     private AnjayAttrStorage attrStorage;
+    private AnjayAccessControl accessControl;
     private DemoCommands demoCommands;
+    public DemoArgs args;
 
     class FirmwareUpdateHandlers implements AnjayFirmwareUpdateHandlers {
         private File file;
@@ -147,31 +152,68 @@ public final class DemoClient implements Runnable {
         this.config.inBufferSize = 4000;
         this.config.outBufferSize = 4000;
         this.config.msgCacheSize = 4000;
+        this.config.disableLegacyServerInitiatedBootstrap = this.args.bootstrapClientInitiatedOnly;
+        this.config.udpTxParams =
+                Optional.of(
+                        new Anjay.CoapUdpTxParams(
+                                this.args.ackTimeout,
+                                this.args.ackRandomFactor,
+                                this.args.maxRetransmit,
+                                this.args.nstart));
+        this.config.msgCacheSize = this.args.cacheSize;
     }
 
-    private void configureDefaultServer() throws Exception {
+    private Optional<byte[]> readFile(String path) throws IOException {
+        return Optional.of(Files.readAllBytes(Paths.get(path)));
+    }
+
+    public void configureDefaultServer() throws Exception {
         this.securityObject.purge();
         this.serverObject.purge();
         AnjaySecurityObject.Instance securityInstance = new AnjaySecurityObject.Instance();
         securityInstance.ssid = 1;
         securityInstance.serverUri = Optional.of(this.args.serverUri);
 
-        if (this.args.securityMode == AnjaySecurityObject.SecurityMode.PSK
-                || this.args.securityMode == AnjaySecurityObject.SecurityMode.CERTIFICATE) {
-            securityInstance.publicCertOrPskIdentity = Optional.of(this.args.identityOrCert);
-            securityInstance.privateCertOrPskKey = Optional.of(this.args.pskOrPrivKey);
+        if (this.args.securityMode == AnjaySecurityObject.SecurityMode.PSK) {
+            securityInstance.publicCertOrPskIdentity =
+                    Optional.ofNullable(this.args.identityOrCert);
+            securityInstance.privateCertOrPskKey = Optional.ofNullable(this.args.pskOrPrivKey);
+        } else if (this.args.securityMode == AnjaySecurityObject.SecurityMode.CERTIFICATE) {
+            if (this.args.clientCertFile != null) {
+                securityInstance.publicCertOrPskIdentity = readFile(this.args.clientCertFile);
+                securityInstance.privateCertOrPskKey = readFile(this.args.keyFile);
+            } else {
+                securityInstance.publicCertOrPskIdentity =
+                        Optional.ofNullable(this.args.identityOrCert);
+                securityInstance.privateCertOrPskKey = Optional.ofNullable(this.args.pskOrPrivKey);
+            }
         } else if (this.args.securityMode != AnjaySecurityObject.SecurityMode.NOSEC) {
             throw new RuntimeException("Unsupported security mode " + this.args.securityMode);
         }
         securityInstance.securityMode = this.args.securityMode;
 
+        if (this.args.bootstrapClientInitiatedOnly) {
+            this.args.bootstrap = true;
+        }
+        securityInstance.bootstrapServer = this.args.bootstrap;
+        if (securityInstance.bootstrapServer) {
+            securityInstance.clientHoldoffS = Optional.of(this.args.bootstrapHoldoff);
+            securityInstance.bootstrapTimeoutS = Optional.of(this.args.bootstrapTimeout);
+        }
         this.securityObject.addInstance(securityInstance);
 
-        AnjayServerObject.Instance serverInstance = new AnjayServerObject.Instance();
-        serverInstance.ssid = 1;
-        serverInstance.lifetime = this.args.lifetime;
-        serverInstance.binding = "U";
-        this.serverObject.addInstance(serverInstance);
+        if (!securityInstance.bootstrapServer) {
+            AnjayServerObject.Instance serverInstance = new AnjayServerObject.Instance();
+            serverInstance.ssid = 1;
+            serverInstance.lifetime = this.args.lifetime;
+            serverInstance.binding = "U";
+            int iid = this.serverObject.addInstance(serverInstance);
+            this.accessControl.setAcl(
+                    1,
+                    iid,
+                    serverInstance.ssid,
+                    AccessMask.READ | AccessMask.WRITE | AccessMask.EXECUTE);
+        }
     }
 
     private void maybeRestoreState() throws Exception {
@@ -179,9 +221,13 @@ public final class DemoClient implements Runnable {
             try (FileInputStream restoreStream = new FileInputStream(this.args.dmPersistenceFile)) {
                 this.securityObject.restore(restoreStream);
                 this.serverObject.restore(restoreStream);
+                this.accessControl.restore(restoreStream);
             } catch (Exception e) {
                 Logger.getAnonymousLogger()
-                        .log(Level.SEVERE, "failed to restore Security and/or Server object: ", e);
+                        .log(
+                                Level.SEVERE,
+                                "failed to restore some of Security, Server and Access Control objects: ",
+                                e);
                 throw e;
             }
         } else {
@@ -202,14 +248,20 @@ public final class DemoClient implements Runnable {
 
     private void maybePersistState() {
         if (this.args.dmPersistenceFile != null
-                && (this.securityObject.isModified() || this.serverObject.isModified())) {
+                && (this.securityObject.isModified()
+                        || this.serverObject.isModified()
+                        || this.accessControl.isModified())) {
             try (FileOutputStream persistStream =
                     new FileOutputStream(this.args.dmPersistenceFile)) {
                 this.securityObject.persist(persistStream);
                 this.serverObject.persist(persistStream);
+                this.accessControl.persist(persistStream);
             } catch (Exception e) {
                 Logger.getAnonymousLogger()
-                        .log(Level.SEVERE, "failed to persist Security and/or Server object: ", e);
+                        .log(
+                                Level.SEVERE,
+                                "failed to persist some of Security, Server and Access Control objects: ",
+                                e);
             }
         }
         if (this.args.attributeStoragePersistenceFile != null && this.attrStorage.isModified()) {
@@ -248,9 +300,16 @@ public final class DemoClient implements Runnable {
             this.securityObject = AnjaySecurityObject.install(anjay);
             this.serverObject = AnjayServerObject.install(anjay);
             this.attrStorage = AnjayAttrStorage.install(anjay);
-            this.demoCommands = new DemoCommands(anjay);
+            this.accessControl = AnjayAccessControl.install(anjay);
+            this.demoCommands = new DemoCommands(anjay, this, this.attrStorage, this.accessControl);
             DemoObject demoObject = new DemoObject();
             anjay.registerObject(demoObject);
+
+            InitialState initialState = new InitialState();
+            FirmwareUpdateHandlers fwuHandlers = new FirmwareUpdateHandlers();
+            AnjayFirmwareUpdate firmwareUpdate =
+                    AnjayFirmwareUpdate.install(anjay, fwuHandlers, initialState);
+            fwuHandlers.setFirmwareUpdateObject(firmwareUpdate);
 
             try {
                 this.maybeRestoreState();
@@ -264,16 +323,20 @@ public final class DemoClient implements Runnable {
                 attrStorage.setObjectAttrs(1, demoObject.oid(), attrs);
             }
 
-            InitialState initialState = new InitialState();
-            FirmwareUpdateHandlers fwuHandlers = new FirmwareUpdateHandlers();
-            AnjayFirmwareUpdate firmwareUpdate =
-                    AnjayFirmwareUpdate.install(anjay, fwuHandlers, initialState);
-            fwuHandlers.setFirmwareUpdateObject(firmwareUpdate);
+            if (this.args.accessEntries != null) {
+                for (DemoArgs.AccessEntry accessEntry : this.args.accessEntries) {
+                    this.accessControl.setAcl(
+                            accessEntry.oid,
+                            accessEntry.iid,
+                            accessEntry.ssid,
+                            accessEntry.accessMask);
+                }
+            }
 
             Logger.getAnonymousLogger().log(Level.INFO, "*** DEMO STARTUP FINISHED ***");
 
             try (Selector selector = Selector.open()) {
-                final long maxWaitMs = 1000L;
+                final long maxWaitMs = 100L;
                 while (!shouldTerminate.get()) {
                     this.demoCommands.executeAll();
                     List<SelectableChannel> sockets = anjay.getSockets();

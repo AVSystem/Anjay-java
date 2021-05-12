@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ struct Duration {
     static jni::Local<jni::Object<Duration>>
     into_java(jni::JNIEnv &env, avs_time_duration_t duration) {
         if (!avs_time_duration_valid(duration)) {
-            avs_throw(std::runtime_error("duration is invalid"));
+            avs_throw(IllegalArgumentException(env, "duration is invalid"));
         }
         return AccessorBase<Duration>::get_static_method<jni::Object<Duration>(
                 jni::jlong, jni::jlong)>(env, "ofSeconds")(

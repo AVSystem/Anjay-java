@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,19 +24,21 @@ NativeSecurityObject::NativeSecurityObject(
     auto native_anjay = NativeAnjay::into_native(env, instance);
     anjay_ = native_anjay->get_anjay();
     if (auto locked = anjay_.lock()) {
-        if (anjay_security_object_install(locked.get())) {
-            avs_throw(std::runtime_error("Could not install security object"));
+        int result = anjay_security_object_install(locked.get());
+        if (result) {
+            avs_throw(AnjayException(env, result,
+                                     "Could not install security object"));
         }
     } else {
-        avs_throw(std::runtime_error("anjay object expired"));
+        avs_throw(IllegalStateException(env, "anjay object expired"));
     }
 }
 
-void NativeSecurityObject::purge(jni::JNIEnv &) {
+void NativeSecurityObject::purge(jni::JNIEnv &env) {
     if (auto locked = anjay_.lock()) {
         anjay_security_object_purge(locked.get());
     } else {
-        avs_throw(std::runtime_error("anjay object expired"));
+        avs_throw(IllegalStateException(env, "anjay object expired"));
     }
 }
 
@@ -92,9 +94,9 @@ jni::jint NativeSecurityObject::add_instance(jni::JNIEnv &env,
         sec.server_sms_number = server_sms_number->c_str();
     }
 
-
     if (preferred_iid < 0 || preferred_iid > ANJAY_ID_INVALID) {
-        avs_throw(std::runtime_error("preferred iid out of anjay_iid_t range"));
+        avs_throw(IllegalArgumentException(
+                env, "preferred iid out of anjay_iid_t range"));
     }
     anjay_iid_t iid = static_cast<anjay_iid_t>(preferred_iid);
     if (auto locked = anjay_.lock()) {
@@ -102,21 +104,21 @@ jni::jint NativeSecurityObject::add_instance(jni::JNIEnv &env,
             return -1;
         }
     } else {
-        avs_throw(std::runtime_error("anjay object expired"));
+        avs_throw(IllegalStateException(env, "anjay object expired"));
     }
     return iid;
 }
 
-jni::jboolean NativeSecurityObject::is_modified(jni::JNIEnv &) {
+jni::jboolean NativeSecurityObject::is_modified(jni::JNIEnv &env) {
     if (auto locked = anjay_.lock()) {
         return anjay_security_object_is_modified(locked.get());
     } else {
-        avs_throw(std::runtime_error("anjay object expired"));
+        avs_throw(IllegalStateException(env, "anjay object expired"));
     }
 }
 
 jni::jint
-NativeSecurityObject::persist(jni::JNIEnv &,
+NativeSecurityObject::persist(jni::JNIEnv &env,
                               jni::Object<utils::OutputStream> &output_stream) {
     if (auto locked = anjay_.lock()) {
         auto stream = utils::OutputStream::get_avs_stream(&output_stream);
@@ -128,12 +130,12 @@ NativeSecurityObject::persist(jni::JNIEnv &,
         }
         return 0;
     } else {
-        avs_throw(std::runtime_error("anjay object expired"));
+        avs_throw(IllegalStateException(env, "anjay object expired"));
     }
 }
 
 jni::jint
-NativeSecurityObject::restore(jni::JNIEnv &,
+NativeSecurityObject::restore(jni::JNIEnv &env,
                               jni::Object<utils::InputStream> &input_stream) {
     if (auto locked = anjay_.lock()) {
         auto stream = utils::InputStream::get_avs_stream(&input_stream);
@@ -145,7 +147,7 @@ NativeSecurityObject::restore(jni::JNIEnv &,
         }
         return 0;
     } else {
-        avs_throw(std::runtime_error("anjay object expired"));
+        avs_throw(IllegalStateException(env, "anjay object expired"));
     }
 }
 

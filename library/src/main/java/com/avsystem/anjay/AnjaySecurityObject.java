@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,19 +29,25 @@ public final class AnjaySecurityObject {
      */
     public static enum SecurityMode {
         /** Pre-Shared Key mode */
-        PSK,
+        PSK("psk"),
         /** Raw Public Key mode */
-        RPK,
+        RPK("rpk"),
         /** Certificate mode */
-        CERTIFICATE,
+        CERTIFICATE("cert"),
         /** NoSec mode */
-        NOSEC,
+        NOSEC("nosec"),
         /** Certificate mode with EST */
-        EST;
+        EST("est");
 
         @Override
         public String toString() {
-            return this.name().toLowerCase();
+            return this.name;
+        }
+
+        private final String name;
+
+        private SecurityMode(String s) {
+            name = s;
         }
     }
 

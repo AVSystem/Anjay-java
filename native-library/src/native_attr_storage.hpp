@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,15 +32,6 @@
 
 class NativeAttrStorage {
     std::weak_ptr<anjay_t> anjay_;
-
-    template <typename T>
-    T cast_id(jni::jint id) {
-        T result = static_cast<T>(id);
-        if (result != id) {
-            avs_throw(std::runtime_error("id out of range"));
-        }
-        return result;
-    }
 
 public:
     static constexpr auto Name() {

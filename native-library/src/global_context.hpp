@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,13 +28,16 @@ class GlobalContext {
     // (which may be different between threads), that are unfortunately
     // necessary in some portions of code that can't easily obtain it in another
     // way.
-    JavaVM *vm_;
+    JavaVM *const vm_;
 
     static std::optional<GlobalContext> SELF;
     struct ConstructorAccess {};
 
     GlobalContext(const GlobalContext &) = delete;
     GlobalContext &operator=(const GlobalContext &) = delete;
+
+    GlobalContext(GlobalContext &&) = delete;
+    GlobalContext &operator=(GlobalContext &&) = delete;
 
 public:
     GlobalContext(ConstructorAccess, JavaVM *vm);

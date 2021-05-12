@@ -1,4 +1,4 @@
-# Copyright 2020 AVSystem <avsystem@avsystem.com>
+# Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -103,6 +103,8 @@ add_library(${PROJECT_NAME} SHARED
             src/global_context.hpp
             src/jni_wrapper.hpp
             src/main.cpp
+            src/native_access_control.cpp
+            src/native_access_control.hpp
             src/native_anjay.cpp
             src/native_anjay.hpp
             src/native_anjay_download.hpp
@@ -131,7 +133,7 @@ if(WITH_INTEGRATION_TEST)
     add_custom_target(demo ALL
                       COMMAND cd ${CMAKE_SOURCE_DIR}/../ && ./gradlew :demo:build -PbuildDir=${CMAKE_BINARY_DIR} && cd -
                       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/libs/demo.jar ${CMAKE_BINARY_DIR}
-                      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_BINARY_DIR}/cmake/libanjay-jni.so ${CMAKE_BINARY_DIR}
+                      COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> ${CMAKE_BINARY_DIR}
                       WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/)
     enable_testing()
     add_custom_target(check)

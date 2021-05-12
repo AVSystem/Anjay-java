@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -119,6 +119,21 @@ class SocketChannel {
         }
     }
 
+    void create() {
+        self_ = jni::NewGlobal(
+                env_,
+                utils::AccessorBase<ChannelTag>::template get_static_method<
+                        jni::Object<ChannelTag>()>(env_, "open")());
+        is_shutdown_ = false;
+        configure_blocking(false);
+    }
+
+    void recreate_if_required() {
+        if (socket().is_closed()) {
+            create();
+        }
+    }
+
     static constexpr avs_time_duration_t NET_CONNECT_TIMEOUT{ 10, 0 };
     static constexpr avs_time_duration_t NET_SEND_TIMEOUT{ 30, 0 };
 
@@ -132,14 +147,10 @@ public:
                   // datagram lifetime.
                   return env.get();
               })),
-              self_(jni::NewGlobal(env_,
-                                   utils::AccessorBase<ChannelTag>::
-                                           template get_static_method<
-                                                   jni::Object<ChannelTag>()>(
-                                                   env_, "open")())),
+              self_(),
               timeout_(AVS_NET_SOCKET_DEFAULT_RECV_TIMEOUT),
-              is_shutdown_(false) {
-        configure_blocking(false);
+              is_shutdown_() {
+        create();
     }
 
     jni::Local<jni::Object<utils::SelectableChannel>>
@@ -156,6 +167,8 @@ public:
         if (!host || !port) {
             avs_throw(SocketError(AVS_EINVAL, "host & port MUST NOT be NULL"));
         }
+
+        recreate_if_required();
         avs_errno_t error = AVS_EHOSTUNREACH;
         for (const InetAddress &addr :
              InetAddress::get_all_by_name(env_, host)) {
@@ -253,9 +266,20 @@ public:
     }
 
     void bind(const char *localaddr, const char *port) {
-        accessor().template get_method<void(jni::Object<SocketAddress>)>(
-                "bind")(
-                InetSocketAddress::from_host_port(env_, localaddr, port));
+        recreate_if_required();
+
+        if (localaddr && *localaddr) {
+            accessor()
+                    .template get_method<jni::Object<ChannelTag>(
+                            jni::Object<SocketAddress>)>("bind")(
+                            InetSocketAddress::from_host_port(env_, localaddr,
+                                                              port));
+        } else {
+            accessor()
+                    .template get_method<jni::Object<ChannelTag>(
+                            jni::Object<SocketAddress>)>("bind")(
+                            InetSocketAddress::from_port(env_, port));
+        }
     }
 
     void set_timeout(avs_time_duration_t duration) {

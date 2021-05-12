@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,11 +44,11 @@ struct Objlnk {
         auto accessor = AccessorBase<Objlnk>{ env, instance };
         auto oid = accessor.get_value<int>("oid");
         if (oid < 0 || oid > std::numeric_limits<anjay_oid_t>::max()) {
-            avs_throw(std::runtime_error("oid out of range"));
+            avs_throw(IllegalArgumentException(env, "oid out of range"));
         }
         auto iid = accessor.get_value<int>("iid");
         if (iid < 0 || iid > std::numeric_limits<anjay_oid_t>::max()) {
-            avs_throw(std::runtime_error("iid out of range"));
+            avs_throw(IllegalArgumentException(env, "iid out of range"));
         }
         return Objlnk{ static_cast<anjay_oid_t>(oid),
                        static_cast<anjay_iid_t>(iid) };

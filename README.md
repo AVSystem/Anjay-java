@@ -1,7 +1,7 @@
+# Anjay-java [<img align="right" height="50px" src="https://avsystem.github.io/Anjay-doc/_images/avsystem_logo.png">](http://www.avsystem.com/)
+
 [![Maven Central](https://img.shields.io/maven-central/v/com.avsystem.anjay/anjay-android?label=maven%20central%3A%20anjay-android)](https://search.maven.org/artifact/com.avsystem.anjay/anjay-android)
 [![Maven Central](https://img.shields.io/maven-central/v/com.avsystem.anjay/anjay-java?label=maven%20central%3A%20anjay-java)](https://search.maven.org/artifact/com.avsystem.anjay/anjay-java)
-
-# Anjay-java [<img align="right" height="50px" src="https://avsystem.github.io/Anjay-doc/_images/avsystem_logo.png">](http://www.avsystem.com/)
 
 ## About
 

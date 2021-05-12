@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,8 +44,8 @@ public:
 
     ByteBuffer(jni::JNIEnv &env, size_t size) : env_(env), self_() {
         if (size > static_cast<size_t>(std::numeric_limits<jni::jint>::max())) {
-            avs_throw(std::domain_error(
-                    "Buffer size exceeds jni::jint max value"));
+            avs_throw(IllegalArgumentException(
+                    env, "Buffer size exceeds jni::jint max value"));
         }
         self_ = jni::NewGlobal(
                 env_,
@@ -87,8 +87,10 @@ public:
 
     size_t copy_to(void *data, size_t size) {
         if (!is_direct()) {
-            avs_throw(std::runtime_error("Sorry. Copying from non-directly "
-                                         "allocated buffers is not supported"));
+            avs_throw(UnsupportedOperationException(
+                    env_,
+                    "Sorry. Copying from non-directly allocated buffers is not "
+                    "supported"));
         }
         const void *buffer = jni::GetDirectBufferAddress(env_, *self_);
         const size_t to_copy = std::min(remaining(), size);

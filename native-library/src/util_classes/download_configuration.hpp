@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ struct DownloadConfiguration {
         std::optional<Etag> get_etag() {
             auto value = get_optional_array<jni::jbyte>("etag");
             if (value) {
-                return std::make_optional<Etag>(*value);
+                return std::make_optional<Etag>(env_, *value);
             } else {
                 return {};
             }
@@ -62,7 +62,6 @@ struct DownloadConfiguration {
             }
             return {};
         }
-
     };
 };
 

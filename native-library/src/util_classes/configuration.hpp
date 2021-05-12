@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -81,7 +81,6 @@ struct Configuration {
             return get_value<bool>("useConnectionId");
         }
 
-
         std::optional<avs_coap_udp_tx_params_t> get_udp_tx_params() {
             auto value = get_optional_value<CoapUdpTxParams>("udpTxParams");
             if (value) {
@@ -90,7 +89,6 @@ struct Configuration {
             }
             return {};
         }
-
 
         std::optional<avs_net_dtls_handshake_timeouts_t>
         get_udp_dtls_hs_tx_params() {
@@ -110,8 +108,8 @@ struct Configuration {
                 std::vector<uint32_t> result(value->size());
                 for (size_t i = 0; i < value->size(); i++) {
                     if ((*value)[i] < 0) {
-                        avs_throw(std::runtime_error(
-                                "ciphersuite ID must not be negative"));
+                        avs_throw(IllegalArgumentException(
+                                env_, "ciphersuite ID must not be negative"));
                     }
                     result[i] = static_cast<uint32_t>((*value)[i]);
                 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 #include "./native_anjay_object_adapter.hpp"
 
 NativeAnjayObjectAdapter::NativeAnjayObjectAdapter(
-        anjay_t *anjay,
+        const std::weak_ptr<anjay_t> &anjay,
         jni::JNIEnv &env,
         const jni::Object<utils::NativeAnjayObject> &object)
         : def_(),
@@ -65,12 +65,19 @@ NativeAnjayObjectAdapter::NativeAnjayObjectAdapter(
 }
 
 NativeAnjayObjectAdapter::~NativeAnjayObjectAdapter() {
-    // NOTE: this may fail if install() failed, but we don't really care.
-    (void) anjay_unregister_object(anjay_, &def_ptr_);
+    if (auto anjay = anjay_.lock()) {
+        // NOTE: this may fail if install() failed, but we don't really care.
+        (void) anjay_unregister_object(anjay.get(), &def_ptr_);
+    }
 }
 
 int NativeAnjayObjectAdapter::install() {
-    return anjay_register_object(anjay_, &def_ptr_);
+    if (auto anjay = anjay_.lock()) {
+        return anjay_register_object(anjay.get(), &def_ptr_);
+    } else {
+        avs_throw(IllegalStateException(accessor_.get_env(),
+                                        "anjay object expired"));
+    }
 }
 
 NativeAnjayObjectAdapter *
@@ -313,4 +320,3 @@ int NativeAnjayObjectAdapter::resource_write_attrs(
     avs_log_and_clear_exception(DEBUG);
     return -1;
 }
-

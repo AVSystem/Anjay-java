@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,7 +53,8 @@ struct FirmwareUpdateInitialResult {
                               clazz.GetMethod<jni::String()>(env, "name")));
         auto mapped_to = MAPPING.find(value);
         if (mapped_to == MAPPING.end()) {
-            avs_throw(std::runtime_error("Unsupported enum value: " + value));
+            avs_throw(IllegalArgumentException(
+                    env, "Unsupported enum value: " + value));
         }
         return mapped_to->second;
     }

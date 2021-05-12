@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,7 +51,7 @@ struct FirmwareUpdateInitialState {
         std::optional<Etag> get_resume_etag() {
             auto value = get_optional_array<jni::jbyte>("resumeEtag");
             if (value) {
-                return std::make_optional<Etag>(*value);
+                return std::make_optional<Etag>(env_, *value);
             } else {
                 return {};
             }
@@ -66,7 +66,6 @@ struct FirmwareUpdateInitialState {
                 return ANJAY_FW_UPDATE_INITIAL_NEUTRAL;
             }
         }
-
     };
 };
 

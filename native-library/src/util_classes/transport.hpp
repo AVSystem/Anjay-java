@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ struct Transport {
         case ANJAY_SOCKET_TRANSPORT_TCP:
             return get_enum_instance("TCP");
         default:
-            avs_throw(std::runtime_error("Unsupported transport"));
+            avs_throw(IllegalArgumentException(env, "Unsupported transport"));
         }
     }
 };

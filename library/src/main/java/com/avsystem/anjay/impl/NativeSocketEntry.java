@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,13 +26,14 @@ public final class NativeSocketEntry {
     private final long socketPtr;
     private final int ssid;
     private final boolean queueMode;
+    private final int port;
 
     public long getSocketPtr() {
         return this.socketPtr;
     }
 
     public SocketEntry intoSocketEntry() {
-        return new SocketEntry(this.channel, this.transport, this.ssid, this.queueMode);
+        return new SocketEntry(this.channel, this.transport, this.ssid, this.queueMode, this.port);
     }
 
     private NativeSocketEntry(
@@ -40,11 +41,13 @@ public final class NativeSocketEntry {
             SelectableChannel channel,
             long socketPtr,
             int ssid,
-            boolean queueMode) {
+            boolean queueMode,
+            int port) {
         this.transport = transport;
         this.channel = channel;
         this.socketPtr = socketPtr;
         this.ssid = ssid;
         this.queueMode = queueMode;
+        this.port = port;
     }
 }

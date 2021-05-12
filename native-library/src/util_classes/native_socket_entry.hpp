@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,12 +39,16 @@ struct NativeSocketEntry {
                 *reinterpret_cast<const compat::AvsSocketBase *>(
                         avs_net_socket_get_system(entry->socket));
 
+        char port[16] = "0";
+        avs_net_socket_get_local_port(entry->socket, port, sizeof(port));
+
         return construct<NativeSocketEntry>(
                 env, utils::Transport::New(env, entry->transport),
                 backend.selectable_channel(),
                 reinterpret_cast<jni::jlong>(entry->socket),
                 static_cast<jni::jint>(entry->ssid),
-                static_cast<jni::jboolean>(entry->queue_mode));
+                static_cast<jni::jboolean>(entry->queue_mode),
+                static_cast<jni::jint>(strtol(port, NULL, 10)));
     }
 };
 

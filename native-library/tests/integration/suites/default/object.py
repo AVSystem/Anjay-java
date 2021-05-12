@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2020 AVSystem <avsystem@avsystem.com>
+# Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,24 +18,7 @@ import jni_test
 from framework.lwm2m.messages import *
 from framework import test_suite
 from framework.test_utils import *
-
-class OID:
-    Test = 1337
-
-
-class RID:
-    class Test:
-        Int = 0
-        Long = 1
-        Float = 2
-        Double = 3
-        String = 4
-        Objlnk = 5
-        Bytes = 6
-        Executable = 7
-        LastExecuteArgs = 8
-        MultipleResource = 9
-
+from .test_object import OID, RID
 
 class TestObjectReadWrite(jni_test.LocalSingleServerTest,
                           test_suite.Lwm2mDmOperations):

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,23 @@ namespace utils {
 namespace detail {
 
 namespace {
+
+std::string get_file_msg(const char *file) {
+    try {
+        throw;
+    } catch (OriginAwareException &e) {
+        // avs_log takes file and line number to indicate where does the log
+        // come from. In case of handline exceptions, we want to display throw
+        // location too - to make it fit into avs_log API, we cheat a little by
+        // using the whole "thrown at $THROW_FILE:$THROW_LINE, caught at
+        // $CATCH_FILE" string as if it was a filename. That way it will look
+        // fine after avs_log appends ":$CATCH_LINE".
+        return std::string("thrown at ") + e.get_throw_location()
+               + ", caught at " + file;
+    } catch (...) {
+        return std::string("caught at ") + file;
+    }
+}
 
 void log_and_clear_java_exception(JNIEnv &env,
                                   avs_log_level_t level,
@@ -71,7 +88,8 @@ void avs_log_and_clear_exception_impl(avs_log_level_t level,
     try {
         if (GlobalContext::call_with_env([=](auto &&env) {
                 if (jni::ExceptionCheck(*env)) {
-                    log_and_clear_java_exception(*env, level, file, line);
+                    log_and_clear_java_exception(
+                            *env, level, get_file_msg(file).c_str(), line);
                     assert(!jni::ExceptionCheck(*env));
                     return true;
                 }
@@ -80,32 +98,20 @@ void avs_log_and_clear_exception_impl(avs_log_level_t level,
             return;
         }
     } catch (...) {
-        avs_log_internal_l__(level, "anjay_jni", file, line,
+        avs_log_internal_l__(level, "anjay_jni", get_file_msg(file).c_str(),
+                             line,
                              "Exception during GlobalContext::call_with_env()");
         return;
     }
     // C++ exception case
     try {
         throw;
-    } catch (OriginAwareException &e) {
-        // avs_log takes file and line number to indicate where does the log
-        // come from. In case of handline exceptions, we want to display throw
-        // location too - to make it fit into avs_log API, we cheat a little
-        // by using the whole "thrown at $THROW_FILE:$THROW_LINE, caught at
-        // $CATCH_FILE" string as if it was a filename. That way it will look
-        // fine after avs_log appends ":$CATCH_LINE".
-        auto msg = std::string("thrown at ") + e.get_throw_location()
-                   + ", caught at " + file;
-        avs_log_internal_l__(level, "anjay_jni", msg.c_str(), line, "%s",
-                             e.what());
     } catch (std::exception &e) {
-        auto msg = std::string("caught at ") + file;
-        avs_log_internal_l__(level, "anjay_jni", msg.c_str(), line, "%s",
-                             e.what());
+        avs_log_internal_l__(level, "anjay_jni", get_file_msg(file).c_str(),
+                             line, "%s", e.what());
     } catch (...) {
-        auto msg = std::string("caught at ") + file;
-        avs_log_internal_l__(level, "anjay_jni", msg.c_str(), line,
-                             "Unknown exception");
+        avs_log_internal_l__(level, "anjay_jni", get_file_msg(file).c_str(),
+                             line, "Unknown exception");
     }
 }
 

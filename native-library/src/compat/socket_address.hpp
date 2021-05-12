@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,6 +96,13 @@ struct InetSocketAddress {
                    const std::string &host,
                    const std::string &port) {
         return from_host_port(env, host, std::stoi(port));
+    }
+
+    static jni::Local<jni::Object<SocketAddress>>
+    from_port(jni::JNIEnv &env, const std::string &port) {
+        return jni::Cast<SocketAddress>(
+                env, jni::Class<SocketAddress>::Find(env),
+                utils::construct<InetSocketAddress>(env, std::stoi(port)));
     }
 
     static jni::Local<jni::Object<SocketAddress>>

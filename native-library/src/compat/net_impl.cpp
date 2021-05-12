@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,8 +58,9 @@ auto call_exception_safe(const std::string &name, F &&callback) noexcept try {
     LOG(DEBUG, "could not perform %s: %s", name.c_str(), e.what());
     return avs_errno(e.error());
 } catch (...) {
-    LOG(ERROR, "could not perform %s", name.c_str());
     avs_log_and_clear_exception(ERROR);
+    LOG(ERROR, "the above exception happened while attempting to perform %s",
+        name.c_str());
     return avs_errno(AVS_EIO);
 }
 } // namespace
@@ -351,14 +352,6 @@ void avs_net_addrinfo_delete(avs_net_addrinfo_t **) {
 
 avs_error_t avs_net_resolved_endpoint_get_host_port(
         const avs_net_resolved_endpoint_t *, char *, size_t, char *, size_t) {
-    AVS_UNREACHABLE("This should not be called");
-    return avs_errno(AVS_ENOTSUP);
-}
-
-avs_error_t avs_net_local_address_for_target_host(const char *,
-                                                  avs_net_af_t,
-                                                  char *,
-                                                  size_t) {
     AVS_UNREACHABLE("This should not be called");
     return avs_errno(AVS_ENOTSUP);
 }

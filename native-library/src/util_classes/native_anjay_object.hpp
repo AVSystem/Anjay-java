@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,8 +68,8 @@ struct NativeAnjayObject {
             IntegerArrayByReference::for_each(env_, array_by_ref, [&](int iid) {
                 if (iid < std::numeric_limits<anjay_iid_t>::min()
                         || iid > std::numeric_limits<anjay_iid_t>::max()) {
-                    avs_throw(std::runtime_error("iid out of range: "
-                                                 + std::to_string(iid)));
+                    avs_throw(IllegalArgumentException(
+                            env_, "iid out of range: " + std::to_string(iid)));
                 }
                 func(static_cast<anjay_iid_t>(iid));
             });
@@ -93,9 +93,9 @@ struct NativeAnjayObject {
                         if (riid < std::numeric_limits<anjay_riid_t>::min()
                                 || riid > std::numeric_limits<
                                                   anjay_riid_t>::max()) {
-                            avs_throw(
-                                    std::runtime_error("riid out of range: "
-                                                       + std::to_string(riid)));
+                            avs_throw(IllegalArgumentException(
+                                    env_, "riid out of range: "
+                                                  + std::to_string(riid)));
                         }
                         func(static_cast<anjay_riid_t>(riid));
                     });

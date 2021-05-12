@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,14 +26,18 @@
 
 class NativeAnjayObjectAdapter {
     anjay_dm_object_def_t def_;
-    const anjay_dm_object_def_t *def_ptr_;
+    const anjay_dm_object_def_t *const def_ptr_;
 
-    anjay_t *anjay_;
+    std::weak_ptr<anjay_t> anjay_;
     utils::NativeAnjayObject::Accessor accessor_;
     std::string version_;
 
     NativeAnjayObjectAdapter(const NativeAnjayObjectAdapter &) = delete;
-    NativeAnjayObjectAdapter &operator=(NativeAnjayObjectAdapter &) = delete;
+    NativeAnjayObjectAdapter &
+    operator=(const NativeAnjayObjectAdapter &) = delete;
+
+    NativeAnjayObjectAdapter(NativeAnjayObjectAdapter &&) = delete;
+    NativeAnjayObjectAdapter &operator=(NativeAnjayObjectAdapter &&) = delete;
 
     static NativeAnjayObjectAdapter *
     get_obj(const anjay_dm_object_def_t *const *obj_ptr);
@@ -160,7 +164,7 @@ class NativeAnjayObjectAdapter {
 
 public:
     explicit NativeAnjayObjectAdapter(
-            anjay_t *anjay,
+            const std::weak_ptr<anjay_t> &anjay,
             jni::JNIEnv &env,
             const jni::Object<utils::NativeAnjayObject> &object);
     ~NativeAnjayObjectAdapter();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 #include "./jni_wrapper.hpp"
 
+#include "./native_access_control.hpp"
 #include "./native_anjay.hpp"
 #include "./native_anjay_download.hpp"
 #include "./native_attr_storage.hpp"
@@ -45,6 +46,7 @@ extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *) try {
     NativeSecurityObject::register_native(env);
     NativeServerObject::register_native(env);
     NativeAttrStorage::register_native(env);
+    NativeAccessControl::register_native(env);
     NativeAnjayDownload::register_native(env);
     NativeFirmwareUpdate::register_native(env);
     NativeLog::register_native(env);

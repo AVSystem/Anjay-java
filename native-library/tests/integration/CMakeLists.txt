@@ -1,4 +1,4 @@
-# Copyright 2020 AVSystem <avsystem@avsystem.com>
+# Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -50,9 +50,9 @@ else()
 endif()
 if(NOT PYTHONINTERP_FOUND
         OR PYTHON_VERSION_MAJOR LESS 3
-        OR (PYTHON_VERSION_MAJOR EQUAL 3 AND PYTHON_VERSION_MINOR LESS 5))
+        OR (PYTHON_VERSION_MAJOR EQUAL 3 AND PYTHON_VERSION_MINOR LESS 6))
     message(FATAL_ERROR
-            "Python >=3.5 is required for integration tests. ${_MISSING_PYTHON_MSG}")
+            "Python >=3.6 is required for integration tests. ${_MISSING_PYTHON_MSG}")
 endif()
 find_package(PythonLibs "${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}")
 if(NOT PYTHONLIBS_FOUND)

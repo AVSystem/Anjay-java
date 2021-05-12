@@ -1,4 +1,4 @@
-# Copyright 2020 AVSystem <avsystem@avsystem.com>
+# Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,10 +17,13 @@ import os
 import ssl
 import threading
 import time
+import socket
 
 import jni_test
 from framework.lwm2m.messages import *
 from framework.test_utils import *
+from framework.lwm2m_test import *
+from framework.coap_file_server import CoapFileServerThread, CoapFileServer
 
 UPDATE_STATE_IDLE = 0
 UPDATE_STATE_DOWNLOADING = 1
@@ -304,3 +307,4 @@ class FirmwareUpdateUnconfiguredHttpsTest(FirmwareUpdate.TestWithHttpsServer):
                             notify_msg)
         self.serv.send(Lwm2mReset(msg_id=notify_msg.msg_id))
         self.assertEqual(0, self.read_state())
+

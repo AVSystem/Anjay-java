@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,8 @@ GlobalContext::GlobalContext(ConstructorAccess, JavaVM *vm) : vm_(vm) {}
 
 GlobalContext &GlobalContext::init(JavaVM *vm) {
     if (SELF) {
-        avs_throw(std::runtime_error("GlobalContext already initialized"));
+        avs_throw(IllegalStateException(jni::GetEnv(*vm),
+                                        "GlobalContext already initialized"));
     }
     SELF.emplace(ConstructorAccess{}, vm);
     return *SELF;

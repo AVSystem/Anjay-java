@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ NativeAnjayDownload::NativeAnjayDownload(
 
     auto url = config_accessor.get_url();
     if (!url) {
-        avs_throw(std::runtime_error("url MUST be set"));
+        avs_throw(IllegalArgumentException(env, "url MUST be set"));
     }
     auto start_offset = config_accessor.get_start_offset();
 
@@ -70,10 +70,13 @@ NativeAnjayDownload::NativeAnjayDownload(
         auto err = anjay_download(locked.get(), &download_config, &handle_);
 
         if (avs_is_err(err)) {
-            avs_throw(std::runtime_error("Could not start download"));
+            avs_throw(AnjayException(
+                    env,
+                    (err.category << (CHAR_BIT * sizeof(err.code))) | err.code,
+                    "Could not start download"));
         }
     } else {
-        avs_throw(std::runtime_error("anjay object expired"));
+        avs_throw(IllegalStateException(env, "anjay object expired"));
     }
 }
 
@@ -121,6 +124,8 @@ avs_error_t NativeAnjayDownload::next_block_handler(anjay_t *,
 
 void NativeAnjayDownload::download_finished_handler(
         anjay_t *, anjay_download_status_t status, void *user_data) try {
+    NativeAnjayDownload *obj = static_cast<NativeAnjayDownload *>(user_data);
+    obj->handle_ = nullptr;
     GlobalContext::call_with_env([=](jni::UniqueEnv &&env) {
         auto result = utils::DownloadResult::into_java(*env, status.result);
         auto make_details = [&](anjay_download_status_t status) {
@@ -136,9 +141,6 @@ void NativeAnjayDownload::download_finished_handler(
                 return utils::Optional::empty(*env);
             }
         };
-        NativeAnjayDownload *obj =
-                static_cast<NativeAnjayDownload *>(user_data);
-        obj->handle_ = nullptr;
         obj->accessor_.get_method<void(jni::Object<utils::DownloadResult>,
                                        jni::Object<utils::Optional>)>(
                 "onDownloadFinished")(result, make_details(status).into_java());
@@ -147,11 +149,11 @@ void NativeAnjayDownload::download_finished_handler(
     avs_log_and_clear_exception(DEBUG);
 }
 
-void NativeAnjayDownload::abort(jni::JNIEnv &) {
+void NativeAnjayDownload::abort(jni::JNIEnv &env) {
     if (auto locked = anjay_.lock()) {
         anjay_download_abort(locked.get(), handle_);
     } else {
-        avs_throw(std::runtime_error("anjay object expired"));
+        avs_throw(IllegalStateException(env, "anjay object expired"));
     }
 }
 

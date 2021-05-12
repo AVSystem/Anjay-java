@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@
 #include <avsystem/commons/avs_log.h>
 
 #include "../global_context.hpp"
+
+#include "./construct.hpp"
 
 #include <cassert>
 #include <sstream>
@@ -54,8 +56,6 @@ public:
     OriginAwareException(OriginAwareException &&) = default;
     OriginAwareException &operator=(OriginAwareException &&) = default;
 
-    virtual const char *what() const noexcept = 0;
-
     std::string get_throw_location() const {
         std::stringstream ss;
         ss << file_ << ":" << line_;
@@ -85,10 +85,6 @@ public:
                      const char *function,
                      T &&e)
             : T(std::move(e)), OriginAwareException(file, line, function) {}
-
-    virtual const char *what() const noexcept {
-        return T::what();
-    }
 };
 
 template <typename T>
@@ -104,6 +100,59 @@ void avs_log_and_clear_exception_impl(avs_log_level_t level,
 } // namespace detail
 
 } // namespace utils
+
+struct AnjayException : public jni::PendingJavaException {
+    static constexpr auto Name() {
+        return "com/avsystem/anjay/AnjayException";
+    }
+
+    AnjayException(JNIEnv &env, jni::jint error_code, const std::string &str) {
+        auto java_exception = utils::construct<AnjayException>(
+                env, error_code, jni::Make<jni::String>(env, str));
+        env.Throw(reinterpret_cast<::jthrowable>(java_exception.get()));
+    }
+};
+
+struct ClassCastException : public jni::PendingJavaException {
+    ClassCastException(JNIEnv &env, const char *str)
+            : jni::PendingJavaException() {
+        env.ThrowNew(env.FindClass("java/lang/ClassCastException"), str);
+    }
+
+    ClassCastException(JNIEnv &env, const std::string &str)
+            : ClassCastException(env, str.c_str()) {}
+};
+
+struct IllegalArgumentException : public jni::PendingJavaException {
+    IllegalArgumentException(JNIEnv &env, const char *str)
+            : jni::PendingJavaException() {
+        env.ThrowNew(env.FindClass("java/lang/IllegalArgumentException"), str);
+    }
+
+    IllegalArgumentException(JNIEnv &env, const std::string &str)
+            : IllegalArgumentException(env, str.c_str()) {}
+};
+
+struct IllegalStateException : public jni::PendingJavaException {
+    IllegalStateException(JNIEnv &env, const char *str)
+            : jni::PendingJavaException() {
+        env.ThrowNew(env.FindClass("java/lang/IllegalStateException"), str);
+    }
+
+    IllegalStateException(JNIEnv &env, const std::string &str)
+            : IllegalStateException(env, str.c_str()) {}
+};
+
+struct UnsupportedOperationException : public jni::PendingJavaException {
+    UnsupportedOperationException(JNIEnv &env, const char *str)
+            : jni::PendingJavaException() {
+        env.ThrowNew(env.FindClass("java/lang/UnsupportedOperationException"),
+                     str);
+    }
+
+    UnsupportedOperationException(JNIEnv &env, const std::string &str)
+            : UnsupportedOperationException(env, str.c_str()) {}
+};
 
 #define avs_throw(e)                       \
     throw(::utils::detail::wrap_exception( \

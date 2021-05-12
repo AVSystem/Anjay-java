@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,13 @@
 #include "./util_classes/native_bytes_context_pointer.hpp"
 
 class NativeBytesContext {
-    anjay_ret_bytes_ctx_t *ctx_;
+    anjay_ret_bytes_ctx_t *const ctx_;
+
+    NativeBytesContext(const NativeBytesContext &) = delete;
+    NativeBytesContext &operator=(const NativeBytesContext &) = delete;
+
+    NativeBytesContext(NativeBytesContext &&) = delete;
+    NativeBytesContext &operator=(NativeBytesContext &&) = delete;
 
 public:
     static constexpr auto Name() {

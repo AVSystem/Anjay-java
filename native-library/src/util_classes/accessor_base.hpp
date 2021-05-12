@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -146,11 +146,13 @@ public:
         auto unboxed = jni::Unbox(get_env(), *value);
         T casted = static_cast<T>(unboxed);
         if (static_cast<int64_t>(casted) != static_cast<int64_t>(unboxed)) {
-            avs_throw(std::domain_error(
+            avs_throw(IllegalArgumentException(
+                    env_,
                     std::string{ field_name }
-                    + " field has value that is out of range "
-                    + std::to_string(std::numeric_limits<T>::min()) + " - "
-                    + std::to_string(std::numeric_limits<T>::max())));
+                            + " field has value that is out of range "
+                            + std::to_string(std::numeric_limits<T>::min())
+                            + " - "
+                            + std::to_string(std::numeric_limits<T>::max())));
         }
         return std::make_optional(casted);
     }
@@ -188,27 +190,31 @@ public:
         if constexpr (std::is_same<T, size_t>::value) {
             auto value = get_impl<jni::jlong>(field_name);
             if (value < 0) {
-                avs_throw(std::domain_error("size_t field "
-                                            + std::string{ field_name }
-                                            + " has value that is negative"));
+                avs_throw(IllegalArgumentException(
+                        env_,
+                        "size_t field " + std::string{ field_name }
+                                + " has value that is negative"));
             } else if (static_cast<uint64_t>(value)
                        > std::numeric_limits<size_t>::max()) {
-                avs_throw(std::domain_error("size_t field "
-                                            + std::string{ field_name }
-                                            + " has value that is too large"));
+                avs_throw(IllegalArgumentException(
+                        env_,
+                        "size_t field " + std::string{ field_name }
+                                + " has value that is too large"));
             }
             return static_cast<size_t>(value);
         } else if constexpr (std::is_same<T, uint16_t>::value) {
             auto value = get_impl<jni::jint>(field_name);
             if (value < 0) {
-                avs_throw(std::domain_error("uint16_t field "
-                                            + std::string{ field_name }
-                                            + " has value that is negative"));
+                avs_throw(IllegalArgumentException(
+                        env_,
+                        "uint16_t field " + std::string{ field_name }
+                                + " has value that is negative"));
             } else if (static_cast<uint32_t>(value)
                        > std::numeric_limits<uint16_t>::max()) {
-                avs_throw(std::domain_error("uint16_t field "
-                                            + std::string{ field_name }
-                                            + " has value that is too large"));
+                avs_throw(IllegalArgumentException(
+                        env_,
+                        "uint16_t field " + std::string{ field_name }
+                                + " has value that is too large"));
             }
             return static_cast<uint16_t>(value);
         } else if constexpr (std::is_same<T, bool>::value) {
@@ -218,13 +224,15 @@ public:
         } else if constexpr (std::is_same<T, char>::value) {
             auto value = get_impl<jni::jchar>(field_name);
             if (value > std::numeric_limits<char>::max()) {
-                avs_throw(std::domain_error("char field "
-                                            + std::string{ field_name }
-                                            + " has value that is too large"));
+                avs_throw(IllegalArgumentException(
+                        env_,
+                        "char field " + std::string{ field_name }
+                                + " has value that is too large"));
             } else if (value < std::numeric_limits<char>::min()) {
-                avs_throw(std::domain_error("char field "
-                                            + std::string{ field_name }
-                                            + " has value that is negative"));
+                avs_throw(IllegalArgumentException(
+                        env_,
+                        "char field " + std::string{ field_name }
+                                + " has value that is negative"));
             }
             return static_cast<char>(value);
         } else {
@@ -258,8 +266,9 @@ public:
         auto field_value = get_value<jni::Object<JavaT>>(field_name);
         if (!jni::IsInstanceOf(env_, field_value.get(),
                                *jni::Class<Enum>::Find(env_))) {
-            avs_throw(std::runtime_error("Field " + std::string{ field_name }
-                                         + " is not a Java Enum"));
+            avs_throw(ClassCastException(env_,
+                                         "Field " + std::string{ field_name }
+                                                 + " is not a Java Enum"));
         }
         auto accessor = AccessorBase<JavaT>{ env_, field_value };
 
@@ -268,7 +277,8 @@ public:
 
         auto mapped_to = mapping.find(value);
         if (mapped_to == mapping.end()) {
-            avs_throw(std::runtime_error("Unsupported enum value: " + value));
+            avs_throw(IllegalArgumentException(env_, "Unsupported enum value: "
+                                                             + value));
         }
         return mapped_to->second;
     }
@@ -276,9 +286,9 @@ public:
     template <typename T>
     void set_value(const char *field_name, const T &value) {
         if constexpr (std::is_same<T, int32_t>::value) {
-            set_impl<jni::jint>(field_name, value);
+            set_impl<jni::jint>(field_name, static_cast<jni::jint>(value));
         } else if constexpr (std::is_same<T, int64_t>::value) {
-            set_impl<jni::jlong>(field_name, value);
+            set_impl<jni::jlong>(field_name, static_cast<jni::jlong>(value));
         } else if constexpr (std::is_same<T, bool>::value) {
             set_impl<jni::jboolean>(field_name,
                                     static_cast<jni::jboolean>(value));

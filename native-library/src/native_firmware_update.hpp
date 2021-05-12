@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,8 +50,9 @@ class NativeFirmwareUpdate {
     static avs_coap_udp_tx_params_t
     get_coap_tx_params(void *user_ptr, const char *download_uri);
 
+    static const anjay_fw_update_handlers_t HANDLERS;
+
     std::weak_ptr<anjay_t> anjay_;
-    anjay_fw_update_handlers_t handlers_;
     utils::FirmwareUpdateHandlers::Accessor accessor_;
     std::optional<std::string> name_;
     std::optional<std::string> version_;

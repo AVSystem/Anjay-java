@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,12 @@
 
 class NativeOutputContext {
     anjay_output_ctx_t *ctx_;
+
+    NativeOutputContext(const NativeOutputContext &) = delete;
+    NativeOutputContext &operator=(const NativeOutputContext &) = delete;
+
+    NativeOutputContext(NativeOutputContext &&) = delete;
+    NativeOutputContext &operator=(NativeOutputContext &&) = delete;
 
 public:
     static constexpr auto Name() {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 AVSystem <avsystem@avsystem.com>
+ * Copyright 2020-2021 AVSystem <avsystem@avsystem.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,10 +35,10 @@
 #include "./util_classes/transport.hpp"
 
 class NativeAnjay {
-    std::vector<std::unique_ptr<NativeAnjayObjectAdapter>> objects_;
-    std::shared_ptr<anjay_t> anjay_;
     std::string endpoint_name_;
     avs_coap_udp_tx_params_t udp_tx_params_;
+    std::vector<std::unique_ptr<NativeAnjayObjectAdapter>> objects_;
+    std::shared_ptr<anjay_t> anjay_;
 
 public:
     static constexpr auto Name() {
