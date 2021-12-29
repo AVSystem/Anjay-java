@@ -24,11 +24,13 @@ import com.avsystem.anjay.AnjayAttributes.ObjectInstanceAttrs;
 import com.avsystem.anjay.AnjayAttributes.ResourceAttrs;
 import com.avsystem.anjay.AnjayDownload;
 import com.avsystem.anjay.AnjayDownloadHandlers;
+import com.avsystem.anjay.AnjayEventLoop;
 import com.avsystem.anjay.AnjaySecurityConfig;
 import com.avsystem.anjay.AnjaySecurityInfoPsk;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -403,6 +405,20 @@ public final class DemoCommands {
         }
     }
 
+    class PressButtonCmd implements DemoCommand {
+        @Override
+        public void apply(String[] args) throws Exception {
+            demoClient.pressButton();
+        }
+    }
+
+    class ReleaseButtonCmd implements DemoCommand {
+        @Override
+        public void apply(String[] args) throws Exception {
+            demoClient.releaseButton();
+        }
+    }
+
     static class DownloadHandlers implements AnjayDownloadHandlers {
         private final File file;
         private final FileOutputStream stream;
@@ -457,6 +473,8 @@ public final class DemoCommands {
         registeredCommands.put("enter-offline", new EnterOfflineCmd());
         registeredCommands.put("exit-offline", new ExitOfflineCmd());
         registeredCommands.put("remove-server", new RemoveServerCmd());
+        registeredCommands.put("press-button", new PressButtonCmd());
+        registeredCommands.put("release-button", new ReleaseButtonCmd());
     }
 
     private Set<Anjay.Transport> parseTransports(String[] args) throws Exception {
@@ -481,7 +499,7 @@ public final class DemoCommands {
         return transportSet;
     }
 
-    private void executeCommand(String cmd) throws Exception {
+    private void executeCommand(String cmd) {
         String[] args = cmd.split(" ");
 
         if (args.length == 0) {
@@ -495,24 +513,17 @@ public final class DemoCommands {
             return;
         }
 
-        command.apply(Arrays.copyOfRange(args, 1, args.length));
+        try {
+            command.apply(Arrays.copyOfRange(args, 1, args.length));
+        } catch (Exception e) {
+            Logger.getAnonymousLogger()
+                    .log(Level.SEVERE, String.format("failed to execute: %s, %s", cmd, e));
+        }
 
         System.out.println("(DEMO)>");
     }
 
-    public void executeAll() {
-        String command;
-        while ((command = this.commands.poll()) != null) {
-            try {
-                this.executeCommand(command);
-            } catch (Exception e) {
-                Logger.getAnonymousLogger()
-                        .log(Level.SEVERE, String.format("failed to execute: %s, %s", command, e));
-            }
-        }
-    }
-
-    public void schedule(String command) {
-        commands.add(command);
+    public void schedule(AnjayEventLoop eventLoop, String command) {
+        eventLoop.scheduleTask(a -> this.executeCommand(command), Instant.now());
     }
 }

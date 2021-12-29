@@ -145,7 +145,7 @@ class CoapDownloadSockets(CoapDownload.Test):
                 '/',
                 DUMMY_PAYLOAD),
                 self.tempfile.name))
-        self.wait_until_socket_count(2, timeout_s=1)
+        self.wait_until_socket_count(2, timeout_s=2)
         self.assertEqual(1, self.get_non_lwm2m_socket_count())
         self.assertEqual('UDP', self.get_transport(socket_index=-1))
 

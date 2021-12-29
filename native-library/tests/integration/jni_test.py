@@ -18,7 +18,7 @@ from framework.test_suite import *
 
 
 class LocalSingleServerTest(test_suite.Lwm2mSingleServerTest):
-    def _start_demo(self, cmdline_args, timeout_s=5):
+    def _start_demo(self, cmdline_args, timeout_s=10):
         """
         Starts the demo executable with given CMDLINE_ARGS.
         """

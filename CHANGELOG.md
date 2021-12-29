@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.14.1 (December 29, 2021)
+
+- Update Anjay to 2.14.1
+- Add AnjayEventLoop object corresponding to Anjay event loop implementation
+- Add AnjayIpsoButton, AnjayBasicIpsoSensor and Anjay3dIpsoSensor objects
+  similar to Anjay IPSO objects implementation
+
 ## 2.11.0 (May 12, 2021)
 
 - Update Anjay to 2.11.0

@@ -75,11 +75,17 @@ public final class NativeUtils {
             long remainingMs;
             int readySockets;
             do {
-                remainingMs = (deadlineNs - System.nanoTime()) / 1_000_000;
+                if (Thread.currentThread().isInterrupted()) {
+                    remainingMs = 0;
+                } else {
+                    remainingMs = (deadlineNs - System.nanoTime()) / 1_000_000;
+                }
                 if (remainingMs <= 0) {
                     readySockets = selector.selectNow();
                 } else {
-                    readySockets = selector.select(remainingMs);
+                    // Interrupting a thread does not sometimes break out of Selector.select()
+                    // (e.g. on Android), so let's limit the wait time to 1 second.
+                    readySockets = selector.select(Math.min(remainingMs, 1000));
                 }
             } while (readySockets == 0 && remainingMs > 0);
 

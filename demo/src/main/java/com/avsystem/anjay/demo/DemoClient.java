@@ -17,15 +17,19 @@
 package com.avsystem.anjay.demo;
 
 import com.avsystem.anjay.Anjay;
+import com.avsystem.anjay.Anjay3dIpsoSensor;
 import com.avsystem.anjay.AnjayAccessControl;
 import com.avsystem.anjay.AnjayAccessControl.AccessMask;
 import com.avsystem.anjay.AnjayAttrStorage;
 import com.avsystem.anjay.AnjayAttributes;
+import com.avsystem.anjay.AnjayBasicIpsoSensor;
+import com.avsystem.anjay.AnjayEventLoop;
 import com.avsystem.anjay.AnjayFirmwareUpdate;
 import com.avsystem.anjay.AnjayFirmwareUpdate.InitialState;
 import com.avsystem.anjay.AnjayFirmwareUpdate.Result;
 import com.avsystem.anjay.AnjayFirmwareUpdateException;
 import com.avsystem.anjay.AnjayFirmwareUpdateHandlers;
+import com.avsystem.anjay.AnjayIpsoButton;
 import com.avsystem.anjay.AnjaySecurityConfig;
 import com.avsystem.anjay.AnjaySecurityInfoCert;
 import com.avsystem.anjay.AnjaySecurityObject;
@@ -37,20 +41,17 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.nio.channels.SelectableChannel;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
-import java.time.Duration;
-import java.util.Iterator;
+import java.time.Instant;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Random;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -62,6 +63,16 @@ public final class DemoClient implements Runnable {
     private AnjayAccessControl accessControl;
     private DemoCommands demoCommands;
     public DemoArgs args;
+
+    private AnjayIpsoButton button;
+
+    public void pressButton() {
+        button.update(0, true);
+    }
+
+    public void releaseButton() {
+        button.update(0, false);
+    }
 
     class FirmwareUpdateHandlers implements AnjayFirmwareUpdateHandlers {
         private File file;
@@ -275,28 +286,66 @@ public final class DemoClient implements Runnable {
         }
     }
 
+    private class FakeAccelerometer {
+        public final double MIN_ACCELERATION = -100.0;
+        public final double MAX_ACCELERATION = 100.0;
+
+        private Random rand = new Random();
+
+        private Double nextValue() {
+            return (MIN_ACCELERATION + rand.nextDouble() * (MAX_ACCELERATION - MIN_ACCELERATION));
+        }
+
+        private Double xVal = 0.0;
+        private Double yVal = 0.0;
+        private Double zVal = 0.0;
+
+        public FakeAccelerometer() {
+            for (int i = 0; i < 10; i++) {
+                xVal += nextValue() * 0.1;
+                yVal += nextValue() * 0.1;
+                zVal += nextValue() * 0.1;
+            }
+        }
+
+        public Double getXAcceleration() {
+            xVal = xVal * 0.9 + nextValue() * 0.1;
+            return xVal;
+        }
+
+        public Double getYAcceleration() {
+            yVal = yVal * 0.9 + nextValue() * 0.1;
+            return yVal;
+        }
+
+        public Double getZAcceleration() {
+            zVal = zVal * 0.9 + nextValue() * 0.1;
+            return zVal;
+        }
+    }
+
     @Override
     public void run() {
-        AtomicBoolean shouldTerminate = new AtomicBoolean(false);
-        Thread stdinThread =
-                new Thread(
-                        () -> {
-                            try (BufferedReader reader =
-                                    new BufferedReader(new InputStreamReader(System.in))) {
-                                String line;
-                                while ((line = reader.readLine()) != null) {
-                                    demoCommands.schedule(line);
+        try (Anjay anjay = new Anjay(this.config);
+                AnjayEventLoop eventLoop = new AnjayEventLoop(anjay, 100L)) {
+            Thread stdinThread =
+                    new Thread(
+                            () -> {
+                                try (BufferedReader reader =
+                                        new BufferedReader(new InputStreamReader(System.in))) {
+                                    String line;
+                                    while ((line = reader.readLine()) != null) {
+                                        demoCommands.schedule(eventLoop, line);
+                                    }
+                                } catch (IOException e) {
+                                    Logger.getAnonymousLogger()
+                                            .log(Level.WARNING, "failed to read from stdin: ", e);
+                                } finally {
+                                    eventLoop.interrupt();
                                 }
-                            } catch (IOException e) {
-                                Logger.getAnonymousLogger()
-                                        .log(Level.WARNING, "failed to read from stdin: ", e);
-                            } finally {
-                                shouldTerminate.set(true);
-                            }
-                        });
-        stdinThread.start();
+                            });
+            stdinThread.start();
 
-        try (Anjay anjay = new Anjay(this.config)) {
             this.securityObject = AnjaySecurityObject.install(anjay);
             this.serverObject = AnjayServerObject.install(anjay);
             this.attrStorage = AnjayAttrStorage.install(anjay);
@@ -335,50 +384,64 @@ public final class DemoClient implements Runnable {
 
             Logger.getAnonymousLogger().log(Level.INFO, "*** DEMO STARTUP FINISHED ***");
 
-            try (Selector selector = Selector.open()) {
-                final long maxWaitMs = 100L;
-                while (!shouldTerminate.get()) {
-                    this.demoCommands.executeAll();
-                    List<SelectableChannel> sockets = anjay.getSockets();
+            button = AnjayIpsoButton.install(anjay);
+            button.instanceAdd(0, "Button1");
 
-                    for (SelectionKey key : selector.keys()) {
-                        if (!sockets.contains(key.channel())) {
-                            key.cancel();
-                        }
-                    }
-                    for (SelectableChannel socket : sockets) {
-                        if (socket.keyFor(selector) == null) {
-                            socket.register(selector, SelectionKey.OP_READ);
-                        }
-                    }
-                    long waitTimeMs = anjay.timeToNext().map(Duration::toMillis).orElse(maxWaitMs);
-                    if (waitTimeMs > maxWaitMs) {
-                        waitTimeMs = maxWaitMs;
-                    }
-                    if (waitTimeMs <= 0) {
-                        selector.selectNow();
-                    } else {
-                        selector.select(waitTimeMs);
-                    }
-                    for (Iterator<SelectionKey> it = selector.selectedKeys().iterator();
-                            it.hasNext(); ) {
-                        anjay.serve(it.next().channel());
-                        it.remove();
-                    }
-                    anjay.schedRun();
+            final double minTemp = 20.0;
+            final double maxTemp = 40.0;
+            AnjayBasicIpsoSensor thermometer = AnjayBasicIpsoSensor.install(anjay, 3303);
+            thermometer.instanceAdd(
+                    0,
+                    "Cel",
+                    Optional.of(20.0),
+                    Optional.of(40.0),
+                    new Supplier<>() {
+                        Random rand = new Random();
 
-                    this.maybePersistState();
-                }
+                        @Override
+                        public Double get() {
+                            return minTemp + rand.nextDouble() * (maxTemp - minTemp);
+                        }
+                    });
+            FakeAccelerometer accelerometer = new FakeAccelerometer();
+            Anjay3dIpsoSensor accelerometerObject = Anjay3dIpsoSensor.install(anjay, 3313);
+            accelerometerObject.instanceAdd(
+                    0,
+                    "m/s2",
+                    Optional.of(accelerometer.MIN_ACCELERATION),
+                    Optional.of(accelerometer.MAX_ACCELERATION),
+                    new Supplier<Anjay3dIpsoSensor.Coordinates>() {
+                        @Override
+                        public Anjay3dIpsoSensor.Coordinates get() {
+                            return new Anjay3dIpsoSensor.Coordinates(
+                                    accelerometer.getXAcceleration(),
+                                    accelerometer.getYAcceleration(),
+                                    accelerometer.getZAcceleration());
+                        }
+                    });
+
+            eventLoop.scheduleTask(
+                    new Consumer<>() {
+                        @Override
+                        public void accept(AnjayEventLoop eventLoop) {
+                            maybePersistState();
+                            thermometer.update(0);
+                            accelerometerObject.update(0);
+                            eventLoop.scheduleTask(this, Instant.now().plusMillis(2000L));
+                        }
+                    },
+                    Instant.now().plusMillis(2000L));
+
+            try {
+                eventLoop.run();
+            } catch (IOException e) {
+                stdinThread.interrupt();
+            } finally {
+                stdinThread.join();
             }
         } catch (Throwable t) {
             System.out.println("Unhandled exception happened during main loop: " + t);
             t.printStackTrace();
-        } finally {
-            try {
-                stdinThread.join();
-            } catch (InterruptedException e) {
-                // that's unlikely to happen
-            }
         }
     }
 }
