@@ -3,6 +3,14 @@
 [![Maven Central](https://img.shields.io/maven-central/v/com.avsystem.anjay/anjay-android?label=maven%20central%3A%20anjay-android)](https://search.maven.org/artifact/com.avsystem.anjay/anjay-android)
 [![Maven Central](https://img.shields.io/maven-central/v/com.avsystem.anjay/anjay-java?label=maven%20central%3A%20anjay-java)](https://search.maven.org/artifact/com.avsystem.anjay/anjay-java)
 
+## ⚠️ Archived Repository
+
+**This repository is no longer actively maintained by the team. It is provided as is for reference purposes only.**
+**We do not accept issues, pull requests, or provide support.**
+**If you are still interested in this project or have questions, feel free to contact us. https://avsystem.com/contact/**
+
+---
+
 ## About
 
 This project provides almost 1:1 API bindings between [Anjay](https://github.com/AVSystem/Anjay)
